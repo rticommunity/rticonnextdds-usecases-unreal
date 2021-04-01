@@ -1,9 +1,9 @@
 ![Image](https://www.rti.com/hubfs/RTI_Oct2016/Images/rti-logounit.png)  
- RTI Connext DDS Use Case: Simulate an Immersive Environment using Real-Time Data with Unreal Engine®
+ RTI Connext DDS Use Case: Simulate an Immersive Environment using Real-Time Data with Unreal EngineÂ®
 =====================================
 
 ## Overview
-This repositiry contains examples of using RTI Connext® witn the Unreal Engine. This folder contains the completed Unreal Enginer workspace from the Simulate an Immersive Environment using Real-Time Data with Unreal Engine® Case + Code. The example has been created using Unreal Engine 4.25.3 and RTI Connext Professional 6.0.1
+This repositiry contains examples of using RTI ConnextÂ® witn the Unreal Engine. This folder contains the completed Unreal Enginer workspace from the Simulate an Immersive Environment using Real-Time Data with Unreal EngineÂ® Case + Code. The example has been created using Unreal Engine 4.25.3 and RTI Connext Professional 6.0.1
 
 
 More Case + Code examples are available at:
@@ -18,4 +18,4 @@ can use to visualize and debug your distributed system.
 You can download RTI Connext here: https://www.rti.com/downloads/
 
 
-These files are meant to be used within Unreal Engine and specifically with the tutorial referenced above.
+
