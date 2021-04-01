@@ -3,4 +3,7 @@
 #include "Unreal_Shapes.h"
 #include "Modules/ModuleManager.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Unreal_Shapes, "Unreal_Shapes" );
+IMPLEMENT_PRIMARY_GAME_MODULE(
+        FDefaultGameModuleImpl,
+        Unreal_Shapes,
+        "Unreal_Shapes");

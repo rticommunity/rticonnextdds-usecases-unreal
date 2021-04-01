@@ -19,13 +19,12 @@
 #include "Unreal_ShapesGameModeBase.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class UNREAL_SHAPES_API AUnreal_ShapesGameModeBase : public AGameModeBase
-{
-	GENERATED_BODY()
+class UNREAL_SHAPES_API AUnreal_ShapesGameModeBase : public AGameModeBase {
+    GENERATED_BODY()
 
 public:
-	AUnreal_ShapesGameModeBase();
+    AUnreal_ShapesGameModeBase();
 };

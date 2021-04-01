@@ -17,5 +17,5 @@
 
 AUnreal_ShapesGameModeBase::AUnreal_ShapesGameModeBase()
 {
-	PlayerControllerClass = AShapesPlayerController::StaticClass();
+    PlayerControllerClass = AShapesPlayerController::StaticClass();
 }

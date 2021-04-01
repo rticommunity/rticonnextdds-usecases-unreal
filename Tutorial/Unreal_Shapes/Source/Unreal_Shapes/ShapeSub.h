@@ -12,8 +12,8 @@
  */
 
 #pragma once
-#pragma warning(disable:4668)
-#pragma warning(disable:4530)
+#pragma warning(disable : 4668)
+#pragma warning(disable : 4530)
 
 #include <dds/dds.hpp>
 
@@ -22,45 +22,45 @@
 #include "ShapeSub.generated.h"
 
 UCLASS()
-class UNREAL_SHAPES_API AShapeSub : public APawn
-{
-	GENERATED_BODY()
+class UNREAL_SHAPES_API AShapeSub : public APawn {
+    GENERATED_BODY()
 
 public:
-	/* Mesh component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "MeshComponent")
-		UStaticMeshComponent* StaticMesh;
+    /* Mesh component */
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "MeshComponent")
+    UStaticMeshComponent* StaticMesh;
 
-	/* Topic Name */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
-		FString TopicName = FString("Square");
+    /* Topic Name */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
+    FString TopicName = FString("Square");
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
-		FString Color = FString("BLUE");
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
+    FString Color = FString("BLUE");
 
-	/* Domain ID */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
-		int32 DomainID = 0;
+    /* Domain ID */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
+    int32 DomainID = 0;
 
 private:
-	FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
-	FString TYPE_NAME = FString("ShapeTypeExtended3D");
-	dds::sub::DataReader<dds::core::xtypes::DynamicData> reader = dds::core::null;
+    FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
+    FString TYPE_NAME = FString("ShapeTypeExtended3D");
+    dds::sub::DataReader<dds::core::xtypes::DynamicData> reader =
+            dds::core::null;
 
 
 public:
-	// Sets default values for this pawn's properties
-	AShapeSub();
+    // Sets default values for this pawn's properties
+    AShapeSub();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+public:
+    // Called every frame
+    virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+    // Called to bind functionality to input
+    virtual void SetupPlayerInputComponent(
+            class UInputComponent* PlayerInputComponent) override;
 };

@@ -19,122 +19,122 @@
 // Sets default values
 AShapeSub::AShapeSub()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    // Set this pawn to call Tick() every frame.  You can turn this off to
+    // improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true;
 
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CustomStaticMesh"));
-	RootComponent = StaticMesh;
-
+    StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(
+            TEXT("CustomStaticMesh"));
+    RootComponent = StaticMesh;
 }
 
 // Called when the game starts or when spawned
 void AShapeSub::BeginPlay()
 {
-	Super::BeginPlay();
-	
-	/* Construct the fully qualified name for the configuration file (XML) location */
-	FString xmlFile = FPaths::Combine(FPaths::ProjectContentDir(), QOS_URL);
-	/* Read the configuration file and set the defaults*/
-	rti::core::QosProviderParams provider_name;
-	provider_name.url_profile({ TCHAR_TO_UTF8(*xmlFile) });
-	dds::core::QosProvider::Default().extensions().default_provider_params(provider_name);
+    Super::BeginPlay();
 
-	/* Initialize the dynamic data type */
-	const dds::core::xtypes::DynamicType& myType =
-		dds::core::QosProvider::Default().extensions().type(TCHAR_TO_UTF8(*TYPE_NAME));
+    /* Construct the fully qualified name for the configuration file (XML)
+     * location */
+    FString xmlFile = FPaths::Combine(FPaths::ProjectContentDir(), QOS_URL);
+    /* Read the configuration file and set the defaults*/
+    rti::core::QosProviderParams provider_name;
+    provider_name.url_profile({ TCHAR_TO_UTF8(*xmlFile) });
+    dds::core::QosProvider::Default().extensions().default_provider_params(
+            provider_name);
 
-	/* Create a domain participant */
-	/* Let’s see if a domain participant already exists */
-	dds::domain::DomainParticipant participant = dds::domain::find(DomainID);
-	/* If not create one */
-	if (participant == dds::core::null)
-	{
-		participant = dds::domain::DomainParticipant(DomainID);
-	}
+    /* Initialize the dynamic data type */
+    const dds::core::xtypes::DynamicType& myType =
+            dds::core::QosProvider::Default().extensions().type(
+                    TCHAR_TO_UTF8(*TYPE_NAME));
 
-
-	/* Get a reference to the implicit subscriber */
-	dds::sub::Subscriber subscriber = rti::sub::implicit_subscriber(participant);
-
-	/* Create the topic with the configured name for the participant and dynamic type */
-	/* Find the topic */
-	auto topic = dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>
-		(participant, TCHAR_TO_UTF8(*TopicName));
-	/* If the topic doesn’t exist create it */
-	if (topic == dds::core::null)
-	{
-		topic = dds::topic::Topic<dds::core::xtypes::DynamicData>(participant,
-			TCHAR_TO_UTF8(*TopicName), myType);
-	}
+    /* Create a domain participant */
+    /* Let’s see if a domain participant already exists */
+    dds::domain::DomainParticipant participant = dds::domain::find(DomainID);
+    /* If not create one */
+    if (participant == dds::core::null) {
+        participant = dds::domain::DomainParticipant(DomainID);
+    }
 
 
-	/* Create the data reader */
-	/* List of readers returned by the find function */
-	std::vector<dds::sub::DataReader<dds::core::xtypes::DynamicData> > readers;
+    /* Get a reference to the implicit subscriber */
+    dds::sub::Subscriber subscriber =
+            rti::sub::implicit_subscriber(participant);
 
-	/* Get the list of readers */
-	int reader_count = dds::sub::find<dds::sub::DataReader<dds::core::xtypes::DynamicData> >(
-		subscriber,
-		TCHAR_TO_UTF8(*TopicName),
-		std::back_inserter(readers));
-
-	/* All we need is at least one reader. If there are multiple let’s use the first one returned.
-	   If no readers are found we create one
-	 */
-	if (reader_count)
-	{
-		reader = readers[0];
-	}
-	else
-	{
-		reader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(subscriber, topic);
-	}
+    /* Create the topic with the configured name for the participant and dynamic
+     * type */
+    /* Find the topic */
+    auto topic =
+            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
+                    participant,
+                    TCHAR_TO_UTF8(*TopicName));
+    /* If the topic doesn’t exist create it */
+    if (topic == dds::core::null) {
+        topic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
+                participant,
+                TCHAR_TO_UTF8(*TopicName),
+                myType);
+    }
 
 
+    /* Create the data reader */
+    /* List of readers returned by the find function */
+    std::vector<dds::sub::DataReader<dds::core::xtypes::DynamicData>> readers;
+
+    /* Get the list of readers */
+    int reader_count = dds::sub::find<
+            dds::sub::DataReader<dds::core::xtypes::DynamicData>>(
+            subscriber,
+            TCHAR_TO_UTF8(*TopicName),
+            std::back_inserter(readers));
+
+    /* All we need is at least one reader. If there are multiple let’s use the
+       first one returned. If no readers are found we create one
+     */
+    if (reader_count) {
+        reader = readers[0];
+    } else {
+        reader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(
+                subscriber,
+                topic);
+    }
 }
 
 // Called every frame
 void AShapeSub::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 
-	FString Filter("color MATCH '" + Color + "'");
-	dds::sub::cond::QueryCondition query_condition(
-		dds::sub::Query(reader, TCHAR_TO_UTF8(*Filter)),
-		dds::sub::status::DataState::any());
+    FString Filter("color MATCH '" + Color + "'");
+    dds::sub::cond::QueryCondition query_condition(
+            dds::sub::Query(reader, TCHAR_TO_UTF8(*Filter)),
+            dds::sub::status::DataState::any());
 
-	/* Take all the samples from the queue */
-	rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-		reader.select().condition(query_condition).take();
+    /* Take all the samples from the queue */
+    rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
+            reader.select().condition(query_condition).take();
 
 
-	/* Process each sample which is valid */
-	for (const auto& sample : samples)
-	{
-		if (sample->info().valid())
-		{
-			/* Read the values we are interested (X and Y) from
-			   the dynamic data */
-			int32 x = sample->data().value<int32>("x");
-			int32 y = sample->data().value<int32>("y");
-			int32 z = sample->data().value<int32>("z");
-			/* Set the location. We want the shape to move horizontal
-			   and vertical. Set the values and adjust for the different
-			   origin, In order for publisher and subscriber to be at the
-			   same location from the maximum box size defined in ShapePub
-			 */
-			FVector Location(z, 260 - x, 270 - y); 
-			SetActorLocation(Location);
-		}
-	}
-
+    /* Process each sample which is valid */
+    for (const auto& sample : samples) {
+        if (sample->info().valid()) {
+            /* Read the values we are interested (X and Y) from
+               the dynamic data */
+            int32 x = sample->data().value<int32>("x");
+            int32 y = sample->data().value<int32>("y");
+            int32 z = sample->data().value<int32>("z");
+            /* Set the location. We want the shape to move horizontal
+               and vertical. Set the values and adjust for the different
+               origin, In order for publisher and subscriber to be at the
+               same location from the maximum box size defined in ShapePub
+             */
+            FVector Location(z, 260 - x, 270 - y);
+            SetActorLocation(Location);
+        }
+    }
 }
 
 // Called to bind functionality to input
 void AShapeSub::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
-

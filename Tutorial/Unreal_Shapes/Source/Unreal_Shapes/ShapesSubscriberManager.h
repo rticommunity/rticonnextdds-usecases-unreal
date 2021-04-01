@@ -12,8 +12,8 @@
  */
 
 #pragma once
-#pragma warning(disable:4668)
-#pragma warning(disable:4530)
+#pragma warning(disable : 4668)
+#pragma warning(disable : 4530)
 
 #include <dds/dds.hpp>
 
@@ -22,37 +22,38 @@
 #include "ShapesSubscriberManager.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class UNREAL_SHAPES_API AShapesSubscriberManager : public AInfo
-{
-	GENERATED_BODY()
-	
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
-	TSubclassOf<class AShapeSubDynamic> SquareSub;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
-	TSubclassOf<class AShapeSubDynamic> CircleSub;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
-	TSubclassOf<class AShapeSubDynamic> TriangleSub;
+class UNREAL_SHAPES_API AShapesSubscriberManager : public AInfo {
+    GENERATED_BODY()
 
-	/* Domain ID */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
-	int32 DomainID = 0;
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
+    TSubclassOf<class AShapeSubDynamic> SquareSub;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
+    TSubclassOf<class AShapeSubDynamic> CircleSub;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Subscriber")
+    TSubclassOf<class AShapeSubDynamic> TriangleSub;
+
+    /* Domain ID */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
+    int32 DomainID = 0;
 
 private:
-	FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
-	FString TYPE_NAME = FString("ShapeTypeExtended3D");
-	dds::sub::DataReader<dds::core::xtypes::DynamicData> SquareReader = dds::core::null;
-	dds::sub::DataReader<dds::core::xtypes::DynamicData> CircleReader = dds::core::null;
-	dds::sub::DataReader<dds::core::xtypes::DynamicData> TriangleReader = dds::core::null;
+    FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
+    FString TYPE_NAME = FString("ShapeTypeExtended3D");
+    dds::sub::DataReader<dds::core::xtypes::DynamicData> SquareReader =
+            dds::core::null;
+    dds::sub::DataReader<dds::core::xtypes::DynamicData> CircleReader =
+            dds::core::null;
+    dds::sub::DataReader<dds::core::xtypes::DynamicData> TriangleReader =
+            dds::core::null;
 
 public:
-	AShapesSubscriberManager();
+    AShapesSubscriberManager();
 
 protected:
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
-
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
 };

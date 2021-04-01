@@ -19,31 +19,30 @@
 #include "ShapesPlayerController.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class UNREAL_SHAPES_API AShapesPlayerController : public APlayerController
-{
-	GENERATED_BODY()
-	
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
-		TSubclassOf<class AShapePub> SquarePub;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
-		TSubclassOf<class AShapePub> CirclePub;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
-		TSubclassOf<class AShapePub> TrianglePub;
+class UNREAL_SHAPES_API AShapesPlayerController : public APlayerController {
+    GENERATED_BODY()
 
-	/* Domain ID */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
-		int32 DomainID = 0;
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
+    TSubclassOf<class AShapePub> SquarePub;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
+    TSubclassOf<class AShapePub> CirclePub;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shape Publisher")
+    TSubclassOf<class AShapePub> TrianglePub;
+
+    /* Domain ID */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
+    int32 DomainID = 0;
 
 private:
-	AActor* Publisher = NULL;
+    AActor* Publisher = NULL;
 
 
 protected:
-	virtual void SetupInputComponent() override;
-	bool ToggleSquarePublisher(FString color);
-	void HandleKey();
+    virtual void SetupInputComponent() override;
+    bool ToggleSquarePublisher(FString color);
+    void HandleKey();
 };

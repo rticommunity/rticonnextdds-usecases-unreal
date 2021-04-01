@@ -12,8 +12,8 @@
  */
 
 #pragma once
-#pragma warning(disable:4668)
-#pragma warning(disable:4530)
+#pragma warning(disable : 4668)
+#pragma warning(disable : 4530)
 
 #include <dds/dds.hpp>
 
@@ -22,58 +22,57 @@
 #include "ShapeSubDynamic.generated.h"
 
 UCLASS()
-class UNREAL_SHAPES_API AShapeSubDynamic : public APawn
-{
-	GENERATED_BODY()
+class UNREAL_SHAPES_API AShapeSubDynamic : public APawn {
+    GENERATED_BODY()
 
 public:
-	/* Mesh component*/
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "MeshComponent")
-	UStaticMeshComponent* StaticMesh;
+    /* Mesh component*/
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "MeshComponent")
+    UStaticMeshComponent* StaticMesh;
 
-	/* Colors */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Purple;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Blue;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Red;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Green;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Yellow;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Cyan;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Magenta;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Orange;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
-	UMaterial* Default;
+    /* Colors */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Purple;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Blue;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Red;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Green;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Yellow;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Cyan;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Magenta;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Orange;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
+    UMaterial* Default;
 
 private:
-	dds::sub::DataReader<dds::core::xtypes::DynamicData> Reader =
-		dds::core::null;
-	dds::core::InstanceHandle Instance = dds::core::null;
+    dds::sub::DataReader<dds::core::xtypes::DynamicData> Reader =
+            dds::core::null;
+    dds::core::InstanceHandle Instance = dds::core::null;
 
 public:
-	// Sets default values for this pawn's properties
-	AShapeSubDynamic();
+    // Sets default values for this pawn's properties
+    AShapeSubDynamic();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+public:
+    // Called every frame
+    virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+    // Called to bind functionality to input
+    virtual void SetupPlayerInputComponent(
+            class UInputComponent* PlayerInputComponent) override;
 
-	void Initialize(
-		dds::sub::DataReader<dds::core::xtypes::DynamicData> myReader,
-		dds::core::InstanceHandle myInstance,
-		FString myColor);
-
+    void Initialize(
+            dds::sub::DataReader<dds::core::xtypes::DynamicData> myReader,
+            dds::core::InstanceHandle myInstance,
+            FString myColor);
 };

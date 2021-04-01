@@ -15,40 +15,43 @@
 
 void AShapesPlayerController::SetupInputComponent()
 {
-	Super::SetupInputComponent();
+    Super::SetupInputComponent();
 
-	InputComponent->BindAction("Publisher", IE_Pressed, this, &AShapesPlayerController::HandleKey);
+    InputComponent->BindAction(
+            "Publisher",
+            IE_Pressed,
+            this,
+            &AShapesPlayerController::HandleKey);
 }
 
 bool AShapesPlayerController::ToggleSquarePublisher(FString color)
 {
-	bool retval = false;
-	UWorld* World = GetWorld();
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.bNoFail = TRUE;  /* Spawn should always succeed even in case of a collision */
-	
-	/* If there is no publisher create one*/
-	if (Publisher == NULL)
-	{
-		const FTransform SpawnLocAndRotation;
-		Publisher = World->SpawnActorDeferred<AActor>(SquarePub, SpawnLocAndRotation);
-		AShapePub* s = Cast<AShapePub>(Publisher);
-		s->Initialize(DomainID, color);
-		s->FinishSpawning(SpawnLocAndRotation);
-		retval = true; // Publisher is running
-	}
-	else
-	{
-		// We have a valid publisher to toggle destray the publisher */
-		AShapePub* s = Cast<AShapePub>(Publisher);
-		s->StopPublish();
-		Publisher = NULL;
-		retval = false; // No publisher running
-	}
-	return retval;
+    bool retval = false;
+    UWorld* World = GetWorld();
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.bNoFail = TRUE; /* Spawn should always succeed even in case of a
+                                   collision */
 
+    /* If there is no publisher create one*/
+    if (Publisher == NULL) {
+        const FTransform SpawnLocAndRotation;
+        Publisher = World->SpawnActorDeferred<AActor>(
+                SquarePub,
+                SpawnLocAndRotation);
+        AShapePub* s = Cast<AShapePub>(Publisher);
+        s->Initialize(DomainID, color);
+        s->FinishSpawning(SpawnLocAndRotation);
+        retval = true;  // Publisher is running
+    } else {
+        // We have a valid publisher to toggle destray the publisher */
+        AShapePub* s = Cast<AShapePub>(Publisher);
+        s->StopPublish();
+        Publisher = NULL;
+        retval = false;  // No publisher running
+    }
+    return retval;
 }
 void AShapesPlayerController::HandleKey()
 {
-	ToggleSquarePublisher("RED");
+    ToggleSquarePublisher("RED");
 }
