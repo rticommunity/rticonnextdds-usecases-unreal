@@ -12,8 +12,7 @@
  */
 
 #include "ShapePub.h"
-#include <rti/core/rticore.hpp>
-#include <rti/core/QosProviderParams.hpp>
+#include "BaseUtilities.h"
 
 
 // Sets default values
@@ -33,66 +32,65 @@ void AShapePub::BeginPlay()
 {
     Super::BeginPlay();
 
-    /* Construct the fully qualified name for the configuration file (XML)
-     * location */
-    FString xmlFile = FPaths::Combine(FPaths::ProjectContentDir(), QOS_URL);
-    /* Read the configuration file and set the defaults*/
-    rti::core::QosProviderParams provider_name;
-    provider_name.url_profile({ TCHAR_TO_UTF8(*xmlFile) });
-    dds::core::QosProvider::Default().extensions().default_provider_params(
-            provider_name);
+    UE_LOG(LogDDS, Log, TEXT("AShapePub BeginPlay called"));
 
-    /* Initialize the dynamic data type */
-    const dds::core::xtypes::DynamicType& myType =
-            dds::core::QosProvider::Default().extensions().type(
-                    TCHAR_TO_UTF8(*TYPE_NAME));
+    // Initialization
+    BeginGameSession();
 
     /* Create a domain participant */
     /* Let’s see if a domain participant already exists */
-    dds::domain::DomainParticipant participant = dds::domain::find(DomainID);
+    participant = DDSTheParticipantFactory->lookup_participant(DomainID);
+
     /* If not create one */
-    if (participant == dds::core::null) {
-        participant = dds::domain::DomainParticipant(DomainID);
+    if (participant == NULL) {
+        participant = DDSTheParticipantFactory->create_participant(DomainID, DDS_PARTICIPANT_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (participant == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("ShapePub failed to create DomainParticipant"));
+            StopGameSession(this);
+        }
+
+        // ignore your own subscriptions
+        participant->ignore_participant(participant->get_instance_handle());
+    }
+
+    /* register type with participant if not registered */
+    // Register type if not registered
+    if (participant->get_typecode(TCHAR_TO_ANSI(*TYPE_NAME)) == NULL) {
+        ShapeTypeExtended3DTypeSupport::register_type(participant);
+        UE_LOG(LogDDS, Log, TEXT("ShapePub type \"%s\" registered"), *TYPE_NAME);
     }
 
     /* Get a reference to the implicit publisher*/
-    dds::pub::Publisher publisher = rti::pub::implicit_publisher(participant);
+    publisher = participant->get_implicit_publisher();
 
-    /* Create the topic with the configured name for the participant and dynamic
-     * type */
-    /* Find the topic */
-    auto topic =
-            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
-                    participant,
-                    TCHAR_TO_UTF8(*TopicName));
-    /* If the topic doesn’t exist create it */
-    if (topic == dds::core::null) {
-        topic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
-                participant,
-                TCHAR_TO_UTF8(*TopicName),
-                myType);
+    /* Create the topic if not already created */
+    DDSTopic* topic = (DDSTopic*) participant->lookup_topicdescription(TCHAR_TO_ANSI(*TopicName));
+
+    if (topic == NULL) {
+        topic = participant->create_topic(TCHAR_TO_ANSI(*TopicName), TCHAR_TO_ANSI(*TYPE_NAME), DDS_TOPIC_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (topic == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("ShapePub failed to create Topic \"%s\" for type \"%s\" "), *TopicName, *TYPE_NAME);
+            StopGameSession(this);
+            return;
+        }
+
+        UE_LOG(LogDDS, Log, TEXT("ShapePub created Topic \"%s\""), *TopicName);
     }
 
-    /* Create the data writer*/
-    std::vector<dds::pub::DataWriter<dds::core::xtypes::DynamicData>> writers;
+    /* Create the data writer */
+    DDSDataWriter* tmpwriter = publisher->create_datawriter(topic, DDS_DATAWRITER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+    writer = ShapeTypeExtended3DDataWriter::narrow(tmpwriter);
 
-    /* Get the list of writers*/
-    int writer_count = dds::pub::find<
-            dds::pub::DataWriter<dds::core::xtypes::DynamicData>>(
-            publisher,
-            TCHAR_TO_UTF8(*TopicName),
-            std::back_inserter(writers));
 
-    /* All we need is at least one writer. If there are multiple let’s use the
-       first one returned. If no readers are found we create one
-     */
-    if (writer_count) {
-        writer = writers[0];
-    } else {
-        writer = dds::pub::DataWriter<dds::core::xtypes::DynamicData>(
-                publisher,
-                topic);
+    if (writer == NULL) {
+        UE_LOG(LogDDS, Error, TEXT("ShapePub failed to create DataWriter for Topic \"%s\""), *TopicName);
+        StopGameSession(this);
+        return;
     }
+
+    UE_LOG(LogDDS, Log, TEXT("ShapePub created DataWriter for Topic \"%s\""), *TopicName);
 
     /* Initialize direction and set initial location */
     Direction =
@@ -105,9 +103,9 @@ void AShapePub::BeginPlay()
                     FMath::RandRange(MinBox.Z, MaxBox.Z)));
 
     /* Initialize the sample and set the size and color */
-    sample = new dds::core::xtypes::DynamicData(myType);
-    sample->value<int32_t>("shapesize", 30);
-    sample->value<std::string>("color", TCHAR_TO_UTF8(*Color));
+    sample = ShapeTypeExtended3DTypeSupport::create_data();
+    sample->shapesize = 30;
+    sample->color = DDS_String_dup(TCHAR_TO_UTF8(*Color));
 }
 
 // Called every frame
@@ -152,12 +150,12 @@ void AShapePub::Tick(float DeltaTime)
     }
 
     /* Only publish if we have a valid writer */
-    if (writer != dds::core::null) {
+    if (writer != NULL) {
         /* Set the values and adjust for the different origin */
-        sample->value<int32_t>("x", MaxBox.Y - Location.Y);
-        sample->value<int32_t>("y", MaxBox.Z - Location.Z);
-        sample->value<int32_t>("z", Location.X);
-        writer->write(*sample);
+        sample->x = MaxBox.Y - Location.Y;
+        sample->y =  MaxBox.Z - Location.Z;
+        sample->z = Location.X;
+        writer->write(*sample, DDS_HANDLE_NIL);
     }
 }
 
@@ -167,33 +165,15 @@ void AShapePub::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
-void AShapePub::Initialize(int32_t myDomainId, FString myColor)
+void AShapePub::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Color = myColor;
-    DomainID = myDomainId;
+    Super::EndPlay(EndPlayReason);
 
-    if (myColor == "PURPLE")
-        StaticMesh->SetMaterial(0, Purple);
-    else if (myColor == "BLUE")
-        StaticMesh->SetMaterial(0, Blue);
-    else if (myColor == "RED")
-        StaticMesh->SetMaterial(0, Red);
-    else if (myColor == "GREEN")
-        StaticMesh->SetMaterial(0, Green);
-    else if (myColor == "YELLOW")
-        StaticMesh->SetMaterial(0, Yellow);
-    else if (myColor == "CYAN")
-        StaticMesh->SetMaterial(0, Cyan);
-    else if (myColor == "MAGENTA")
-        StaticMesh->SetMaterial(0, Magenta);
-    else if (myColor == "ORANGE")
-        StaticMesh->SetMaterial(0, Orange);
-    else
-        StaticMesh->SetMaterial(0, Default);
-}
+    /* Delete the writer */
+    DDSDataWriter* tmpWriter = writer;
+    writer = NULL;
+    publisher->delete_datawriter(tmpWriter);
 
-void AShapePub::StopPublish()
-{
     Destroy();
     GEngine->ForceGarbageCollection(true);
 }

@@ -11,8 +11,11 @@
  * inability to use the software.
  */
 
+
 #include "ShapesSubscriberManager.h"
 #include "ShapeSubDynamic.h"
+#include "BaseUtilities.h"
+
 
 AShapesSubscriberManager::AShapesSubscriberManager()
 {
@@ -23,134 +26,127 @@ void AShapesSubscriberManager::BeginPlay()
 {
     Super::BeginPlay();
 
-    /* Construct the fully qualified name for the configuration file (XML)
-     * location */
-    FString xmlFile = FPaths::Combine(FPaths::ProjectContentDir(), QOS_URL);
-    /* Read the configuration file and set the defaults*/
-    rti::core::QosProviderParams provider_name;
-    provider_name.url_profile({ TCHAR_TO_UTF8(*xmlFile) });
-    dds::core::QosProvider::Default().extensions().default_provider_params(
-            provider_name);
+    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager BeginPlay called"));
 
-    /* Initialize the dynamic data type */
-    const dds::core::xtypes::DynamicType& myType =
-            dds::core::QosProvider::Default().extensions().type(
-                    TCHAR_TO_UTF8(*TYPE_NAME));
+    // Initialization
+    BeginGameSession();
 
     /* Create a domain participant */
     /* Let’s see if a domain participant already exists */
-    dds::domain::DomainParticipant participant = dds::domain::find(DomainID);
+    participant = DDSTheParticipantFactory->lookup_participant(DomainID);
+
     /* If not create one */
-    if (participant == dds::core::null) {
-        participant = dds::domain::DomainParticipant(DomainID);
+    if (participant == NULL) {
+        participant = DDSTheParticipantFactory->create_participant(DomainID, DDS_PARTICIPANT_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (participant == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create DomainParticipant"));
+            StopGameSession(this);
+        }
+
+        // ignore your own publications
+        participant->ignore_participant(participant->get_instance_handle());
     }
 
+    /* register type with participant if not registered */
+    // Register type if not registered
+    if (participant->get_typecode(TCHAR_TO_ANSI(*TYPE_NAME)) == NULL) {
+        ShapeTypeExtended3DTypeSupport::register_type(participant);
+        UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager type \"%s\" registered"), *TYPE_NAME);
+    }
 
-    /* Get a reference to the implicit subscriber */
-    dds::sub::Subscriber subscriber =
-            rti::sub::implicit_subscriber(participant);
+    /* Get a reference to the implicit subscriber*/
+    subscriber = participant->get_implicit_subscriber();
 
     /* Create the topic with the configured name for the participant and dynamic
      * type */
     /* Find the topic */
-    auto Squaretopic =
-            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
-                    participant,
-                    "Square");
-    /* If the topic doesn’t exist create it */
-    if (Squaretopic == dds::core::null) {
-        Squaretopic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
-                participant,
-                "Square",
-                myType);
+    DDSTopic* Squaretopic = (DDSTopic*)participant->lookup_topicdescription("Square");
+
+    if (Squaretopic == NULL) {
+        Squaretopic = participant->create_topic("Square", TCHAR_TO_ANSI(*TYPE_NAME), DDS_TOPIC_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (Squaretopic == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create Topic \"Square\" for type \"%s\" "), *TYPE_NAME);
+            StopGameSession(this);
+            return;
+        }
+
+        UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created Topic \"Square\""));
     }
 
     /* Create the topic with the configured name for the participant and dynamic
      * type */
     /* Find the topic */
-    auto Circletopic =
-            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
-                    participant,
-                    "Circle");
-    /* If the topic doesn’t exist create it */
-    if (Circletopic == dds::core::null) {
-        Circletopic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
-                participant,
-                "Circle",
-                myType);
+    DDSTopic* Circletopic = (DDSTopic*)participant->lookup_topicdescription("Circle");
+
+    if (Circletopic == NULL) {
+        Circletopic = participant->create_topic("Circle", TCHAR_TO_ANSI(*TYPE_NAME), DDS_TOPIC_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (Circletopic == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create Topic \"Circle\" for type \"%s\" "), *TYPE_NAME);
+            StopGameSession(this);
+            return;
+        }
+
+        UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created Topic \"Circle\""));
     }
 
     /* Create the topic with the configured name for the participant and dynamic
      * type */
     /* Find the topic */
-    auto Triangletopic =
-            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
-                    participant,
-                    "Triangle");
-    /* If the topic doesn’t exist create it */
-    if (Triangletopic == dds::core::null) {
-        Triangletopic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
-                participant,
-                "Triangle",
-                myType);
+    DDSTopic* Triangletopic = (DDSTopic*)participant->lookup_topicdescription("Triangle");
+
+    if (Triangletopic == NULL) {
+        Triangletopic = participant->create_topic("Triangle", TCHAR_TO_ANSI(*TYPE_NAME), DDS_TOPIC_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (Triangletopic == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create Topic \"Triangle\" for type \"%s\" "), *TYPE_NAME);
+            StopGameSession(this);
+            return;
+        }
+
+        UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created Topic \"Triangle\""));
     }
+
+    /* Create the data reader */
+    DDSDataReader* tmpreader = subscriber->create_datareader(Squaretopic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+    SquareReader = ShapeTypeExtended3DDataReader::narrow(tmpreader);
+
+    if (SquareReader == NULL) {
+        UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create DataReader for Topic \"Square\""));
+        StopGameSession(this);
+        return;
+    }
+
+    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created DataReader for Topic \"Square\""));
 
 
     /* Create the data reader */
-    /* List of readers returned by the find function */
-    std::vector<dds::sub::DataReader<dds::core::xtypes::DynamicData>> readers;
+    tmpreader = subscriber->create_datareader(Circletopic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+    CircleReader = ShapeTypeExtended3DDataReader::narrow(tmpreader);
 
-    /* Get the list of readers */
-    int reader_count = dds::sub::find<
-            dds::sub::DataReader<dds::core::xtypes::DynamicData>>(
-            subscriber,
-            "Square",
-            std::back_inserter(readers));
-
-    /* All we need is at least one reader. If there are multiple let’s use the
-       first one returned. If no readers are found we create one
-     */
-    if (reader_count) {
-        SquareReader = readers[0];
-    } else {
-        SquareReader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(
-                subscriber,
-                Squaretopic);
+    if (CircleReader == NULL) {
+        UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create DataReader for Topic \"Circle\""));
+        StopGameSession(this);
+        return;
     }
 
-    reader_count = dds::sub::find<
-            dds::sub::DataReader<dds::core::xtypes::DynamicData>>(
-            subscriber,
-            "Circle",
-            std::back_inserter(readers));
+    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created DataReader for Topic \"Circle\""));
 
-    /* All we need is at least one reader. If there are multiple let’s use the
-       first one returned. If no readers are found we create one
-     */
-    if (reader_count) {
-        CircleReader = readers[0];
-    } else {
-        CircleReader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(
-                subscriber,
-                Circletopic);
+
+    /* Create the data reader */
+    tmpreader = subscriber->create_datareader(Triangletopic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+    TriangleReader = ShapeTypeExtended3DDataReader::narrow(tmpreader);
+
+    if (TriangleReader == NULL) {
+        UE_LOG(LogDDS, Error, TEXT("AShapesSubscriberManager failed to create DataReader for Topic \"Triangle\""));
+        StopGameSession(this);
+        return;
     }
 
-    reader_count = dds::sub::find<
-            dds::sub::DataReader<dds::core::xtypes::DynamicData>>(
-            subscriber,
-            "Triangle",
-            std::back_inserter(readers));
+    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager created DataReader for Topic \"Triangle\""));
 
-    /* All we need is at least one reader. If there are multiple let’s use the
-       first one returned. If no readers are found we create one
-     */
-    if (reader_count) {
-        TriangleReader = readers[0];
-    } else {
-        TriangleReader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(
-                subscriber,
-                Triangletopic);
-    }
 }
 
 
@@ -162,93 +158,139 @@ void AShapesSubscriberManager::Tick(float DeltaTime)
     FActorSpawnParameters SpawnParams;
     SpawnParams.bNoFail = TRUE;
 
-    if (SquareReader != dds::core::null) {
-        rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-                SquareReader.select()
-                        .state(dds::sub::status::DataState::new_instance())
-                        .read();
+    if (SquareReader != NULL) {
 
-        /* Process each sample which is valid */
-        for (const auto& sample : samples) {
-            if (sample->info().valid()) {
-                /* Check if there are new instances */
-                dds::sub::status::ViewState view_state =
-                        sample.info().state().view_state();
-                if (view_state == dds::sub::status::ViewState::new_view()) {
+        ShapeTypeExtended3DSeq shapeSeq;
+        DDS_SampleInfoSeq infoSeq;
+
+        // Get only samples for instances that have not ever been seen (new colors)
+        if (SquareReader->read(shapeSeq, infoSeq, DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
+            DDS_NEW_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE) == DDS_RETCODE_OK) {
+
+            UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager Got new color for Topic \"Square\""));
+
+            for (int i=0; i<shapeSeq.length(); ++i) {
+                if (infoSeq[i].valid_data) {
                     /* Set the color of the new instance and spawn the
                      * subscriber */
-                    FString color(
-                            sample->data().value<std::string>("color").c_str());
-                    const FTransform SpawnLocAndRotation;
+                    FString color(shapeSeq[i].color);
+                    FTransform SpawnLocAndRotation;
+                    SpawnLocAndRotation.SetLocation(FVector(shapeSeq[i].x, shapeSeq[i].y, shapeSeq[i].z));
+
                     AActor* a = World->SpawnActorDeferred<AActor>(
-                            SquareSub,
-                            SpawnLocAndRotation);
+                        SquareSub,
+                        SpawnLocAndRotation, nullptr, nullptr,
+                        ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
                     AShapeSubDynamic* s = Cast<AShapeSubDynamic>(a);
                     s->Initialize(
                             SquareReader,
-                            sample->info().instance_handle(),
+                            infoSeq[i].instance_handle,
                             color);
                     s->FinishSpawning(SpawnLocAndRotation);
+
+                    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager color: %s"), *color);
                 }
             }
+
+            SquareReader->return_loan(shapeSeq, infoSeq);
         }
+
     }
 
-    if (CircleReader != dds::core::null) {
-        rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-                CircleReader.select()
-                        .state(dds::sub::status::DataState::new_instance())
-                        .read();
+    if (CircleReader != NULL) {
 
-        /* Process each sample which is valid */
-        for (const auto& sample : samples) {
-            if (sample->info().valid()) {
-                dds::sub::status::ViewState view_state =
-                        sample.info().state().view_state();
-                if (view_state == dds::sub::status::ViewState::new_view()) {
-                    FString color(
-                            sample->data().value<std::string>("color").c_str());
-                    const FTransform SpawnLocAndRotation;
+        ShapeTypeExtended3DSeq shapeSeq;
+        DDS_SampleInfoSeq infoSeq;
+
+        // Get only samples for instances that have not ever been seen (new colors)
+        if (CircleReader->read(shapeSeq, infoSeq, DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
+            DDS_NEW_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE) == DDS_RETCODE_OK) {
+
+            UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager Got new color for Topic \"Circle\""));
+
+            for (int i = 0; i < shapeSeq.length(); ++i) {
+                if (infoSeq[i].valid_data) {
+                    /* Set the color of the new instance and spawn the
+                     * subscriber */
+                    FString color(shapeSeq[i].color);
+                    FTransform SpawnLocAndRotation;
+                    SpawnLocAndRotation.SetLocation(FVector(shapeSeq[i].x, shapeSeq[i].y, shapeSeq[i].z));
+
                     AActor* a = World->SpawnActorDeferred<AActor>(
-                            CircleSub,
-                            SpawnLocAndRotation);
+                        CircleSub,
+                        SpawnLocAndRotation, nullptr, nullptr,
+                        ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
                     AShapeSubDynamic* s = Cast<AShapeSubDynamic>(a);
                     s->Initialize(
-                            CircleReader,
-                            sample->info().instance_handle(),
-                            color);
+                        CircleReader,
+                        infoSeq[i].instance_handle,
+                        color);
                     s->FinishSpawning(SpawnLocAndRotation);
+
+                    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager color: %s"), *color);
                 }
             }
+
+            CircleReader->return_loan(shapeSeq, infoSeq);
         }
     }
 
-    if (TriangleReader != dds::core::null) {
-        rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-                TriangleReader.select()
-                        .state(dds::sub::status::DataState::new_instance())
-                        .read();
+    if (TriangleReader != NULL) {
 
-        /* Process each sample which is valid */
-        for (const auto& sample : samples) {
-            if (sample->info().valid()) {
-                dds::sub::status::ViewState view_state =
-                        sample.info().state().view_state();
-                if (view_state == dds::sub::status::ViewState::new_view()) {
-                    FString color(
-                            sample->data().value<std::string>("color").c_str());
-                    const FTransform SpawnLocAndRotation;
+        ShapeTypeExtended3DSeq shapeSeq;
+        DDS_SampleInfoSeq infoSeq;
+
+        // Get only samples for instances that have not ever been seen (new colors)
+        if (TriangleReader->read(shapeSeq, infoSeq, DDS_LENGTH_UNLIMITED, DDS_ANY_SAMPLE_STATE,
+            DDS_NEW_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE) == DDS_RETCODE_OK) {
+
+            UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager Got new color for Topic \"Triangle\""));
+
+            for (int i = 0; i < shapeSeq.length(); ++i) {
+                if (infoSeq[i].valid_data) {
+                    /* Set the color of the new instance and spawn the
+                     * subscriber */
+                    FString color(shapeSeq[i].color);
+                    FTransform SpawnLocAndRotation;
+                    SpawnLocAndRotation.SetLocation(FVector(shapeSeq[i].x, shapeSeq[i].y, shapeSeq[i].z));
+
                     AActor* a = World->SpawnActorDeferred<AActor>(
-                            TriangleSub,
-                            SpawnLocAndRotation);
+                        TriangleSub,
+                        SpawnLocAndRotation, nullptr, nullptr,
+                        ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
                     AShapeSubDynamic* s = Cast<AShapeSubDynamic>(a);
                     s->Initialize(
-                            TriangleReader,
-                            sample->info().instance_handle(),
-                            color);
+                        TriangleReader,
+                        infoSeq[i].instance_handle,
+                        color);
                     s->FinishSpawning(SpawnLocAndRotation);
+
+                    UE_LOG(LogDDS, Log, TEXT("AShapesSubscriberManager color: %s"), *color);
                 }
             }
         }
+
+        TriangleReader->return_loan(shapeSeq, infoSeq);
     }
+}
+
+void AShapesSubscriberManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    /* Delete the readers */
+    DDSDataReader* tmpReader = SquareReader;
+    SquareReader = NULL;
+    subscriber->delete_datareader(tmpReader);
+
+    tmpReader = CircleReader;
+    CircleReader = NULL;
+    subscriber->delete_datareader(tmpReader);
+
+    tmpReader = TriangleReader;
+    TriangleReader = NULL;
+    subscriber->delete_datareader(tmpReader);
+
+    Destroy();
+    GEngine->ForceGarbageCollection(true);
 }

@@ -15,7 +15,12 @@
 #pragma warning(disable : 4668)
 #pragma warning(disable : 4530)
 
-#include <dds/dds.hpp>
+#pragma once
+
+#include "ndds/ndds_cpp.h"
+#include "ShapeType.h"
+#include "ShapeTypePlugin.h"
+#include "ShapeTypeSupport.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
@@ -50,29 +55,24 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Color")
     UMaterial* Default;
 
-private:
-    dds::sub::DataReader<dds::core::xtypes::DynamicData> Reader =
-            dds::core::null;
-    dds::core::InstanceHandle Instance = dds::core::null;
-
 public:
     // Sets default values for this pawn's properties
     AShapeSubDynamic();
 
-protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
-
-public:
     // Called every frame
     virtual void Tick(float DeltaTime) override;
 
-    // Called to bind functionality to input
-    virtual void SetupPlayerInputComponent(
-            class UInputComponent* PlayerInputComponent) override;
-
     void Initialize(
-            dds::sub::DataReader<dds::core::xtypes::DynamicData> myReader,
-            dds::core::InstanceHandle myInstance,
-            FString myColor);
+        ShapeTypeExtended3DDataReader* Reader,
+        DDS_InstanceHandle_t Instance,
+        FString myColor);
+
+protected:
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+private:
+    ShapeTypeExtended3DDataReader* Reader = NULL;
+    DDS_InstanceHandle_t Instance = DDS_HANDLE_NIL;
 };
