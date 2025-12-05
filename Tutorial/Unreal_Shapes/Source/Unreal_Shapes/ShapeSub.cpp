@@ -12,8 +12,7 @@
  */
 
 #include "ShapeSub.h"
-#include <rti/core/rticore.hpp>
-#include <rti/core/QosProviderParams.hpp>
+#include "BaseUtilities.h"
 
 
 // Sets default values
@@ -33,70 +32,62 @@ void AShapeSub::BeginPlay()
 {
     Super::BeginPlay();
 
-    /* Construct the fully qualified name for the configuration file (XML)
-     * location */
-    FString xmlFile = FPaths::Combine(FPaths::ProjectContentDir(), QOS_URL);
-    /* Read the configuration file and set the defaults*/
-    rti::core::QosProviderParams provider_name;
-    provider_name.url_profile({ TCHAR_TO_UTF8(*xmlFile) });
-    dds::core::QosProvider::Default().extensions().default_provider_params(
-            provider_name);
-
-    /* Initialize the dynamic data type */
-    const dds::core::xtypes::DynamicType& myType =
-            dds::core::QosProvider::Default().extensions().type(
-                    TCHAR_TO_UTF8(*TYPE_NAME));
+    // Initialization
+    BeginGameSession();
 
     /* Create a domain participant */
     /* Let’s see if a domain participant already exists */
-    dds::domain::DomainParticipant participant = dds::domain::find(DomainID);
+    participant = DDSTheParticipantFactory->lookup_participant(DomainID);
+
     /* If not create one */
-    if (participant == dds::core::null) {
-        participant = dds::domain::DomainParticipant(DomainID);
+    if (participant == NULL) {
+        participant = DDSTheParticipantFactory->create_participant(DomainID, DDS_PARTICIPANT_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (participant == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("ShapeSub failed to create DomainParticipant"));
+            StopGameSession(this);
+        }
+
+        // ignore your own publications
+        participant->ignore_participant(participant->get_instance_handle());
     }
 
-
-    /* Get a reference to the implicit subscriber */
-    dds::sub::Subscriber subscriber =
-            rti::sub::implicit_subscriber(participant);
-
-    /* Create the topic with the configured name for the participant and dynamic
-     * type */
-    /* Find the topic */
-    auto topic =
-            dds::topic::find<dds::topic::Topic<dds::core::xtypes::DynamicData>>(
-                    participant,
-                    TCHAR_TO_UTF8(*TopicName));
-    /* If the topic doesn’t exist create it */
-    if (topic == dds::core::null) {
-        topic = dds::topic::Topic<dds::core::xtypes::DynamicData>(
-                participant,
-                TCHAR_TO_UTF8(*TopicName),
-                myType);
+    /* register type with participant if not registered */
+    // Register type if not registered
+    if (participant->get_typecode(TCHAR_TO_ANSI(*TYPE_NAME)) == NULL) {
+        ShapeTypeExtended3DTypeSupport::register_type(participant);
+        UE_LOG(LogDDS, Log, TEXT("ShapeSub type \"%s\" registered"), *TYPE_NAME);
     }
 
+    /* Get a reference to the implicit subscriber*/
+    subscriber = participant->get_implicit_subscriber();
+
+    /* Create the topic if not already created */
+    DDSTopic* topic = (DDSTopic*)participant->lookup_topicdescription(TCHAR_TO_ANSI(*TopicName));
+
+    if (topic == NULL) {
+        topic = participant->create_topic(TCHAR_TO_ANSI(*TopicName), TCHAR_TO_ANSI(*TYPE_NAME), DDS_TOPIC_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+
+        if (topic == NULL) {
+            UE_LOG(LogDDS, Error, TEXT("ShapeSub failed to create Topic \"%s\" for type \"%s\" "), *TopicName, *TYPE_NAME);
+            StopGameSession(this);
+            return;
+        }
+
+        UE_LOG(LogDDS, Log, TEXT("ShapeSub created Topic \"%s\""), *TopicName);
+    }
 
     /* Create the data reader */
-    /* List of readers returned by the find function */
-    std::vector<dds::sub::DataReader<dds::core::xtypes::DynamicData>> readers;
+    DDSDataReader* tmpreader = subscriber->create_datareader(topic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
+    reader = ShapeTypeExtended3DDataReader::narrow(tmpreader);
 
-    /* Get the list of readers */
-    int reader_count = dds::sub::find<
-            dds::sub::DataReader<dds::core::xtypes::DynamicData>>(
-            subscriber,
-            TCHAR_TO_UTF8(*TopicName),
-            std::back_inserter(readers));
-
-    /* All we need is at least one reader. If there are multiple let’s use the
-       first one returned. If no readers are found we create one
-     */
-    if (reader_count) {
-        reader = readers[0];
-    } else {
-        reader = dds::sub::DataReader<dds::core::xtypes::DynamicData>(
-                subscriber,
-                topic);
+    if (reader == NULL) {
+        UE_LOG(LogDDS, Error, TEXT("ShapeSub failed to create DataReader for Topic \"%s\""), *TopicName);
+        StopGameSession(this);
+        return;
     }
+
+    UE_LOG(LogDDS, Log, TEXT("ShapeSub created DataReader for Topic \"%s\""), *TopicName);
 }
 
 // Called every frame
@@ -104,37 +95,55 @@ void AShapeSub::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    FString Filter("color MATCH '" + Color + "'");
-    dds::sub::cond::QueryCondition query_condition(
-            dds::sub::Query(reader, TCHAR_TO_UTF8(*Filter)),
-            dds::sub::status::DataState::any());
+    if (reader) {
+        ShapeTypeExtended3DSeq shapeSeq;
+        DDS_SampleInfoSeq infoSeq;
 
-    /* Take all the samples from the queue */
-    rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-            reader.select().condition(query_condition).take();
+        // Possible that multiple samples have been received since last poll
+        // Data is received in a sequence (variable-length array)
+        if (reader->take(shapeSeq, infoSeq) == DDS_RETCODE_OK) {
 
+            // get subscribed color
+            char* subcolor = TCHAR_TO_ANSI(*Color);
 
-    /* Process each sample which is valid */
-    for (const auto& sample : samples) {
-        if (sample->info().valid()) {
-            /* Read the values we are interested (X and Y) from
-               the dynamic data */
-            int32 x = sample->data().value<int32>("x");
-            int32 y = sample->data().value<int32>("y");
-            int32 z = sample->data().value<int32>("z");
-            /* Set the location. We want the shape to move horizontal
-               and vertical. Set the values and adjust for the different
-               origin, In order for publisher and subscriber to be at the
-               same location from the maximum box size defined in ShapePub
-             */
-            FVector Location(z, 260 - x, 270 - y);
-            SetActorLocation(Location);
+            // Only need to copy out the value of the last received value
+            for (int i = 0; i < shapeSeq.length(); ++i) {
+
+                // Always need to check for data validity
+                if (infoSeq[i].valid_data) {
+
+                    if (strcmp(shapeSeq[i].color, subcolor)==0) {
+                        int32 x = shapeSeq[i].x;
+                        int32 y = shapeSeq[i].y;
+                        int32 z = shapeSeq[i].z;
+                        /* Set the location. We want the shape to move horizontal
+                           and vertical. Set the values and adjust for the different
+                           origin, In order for publisher and subscriber to be at the
+                           same location from the maximum box size defined in ShapePub
+                         */
+                        FVector Location(z, 260 - x, 270 - y);
+                        SetActorLocation(Location);
+                    }
+                }
+            }
+
+            // Loaned storage for data/info is returned to the DataReader
+            reader->return_loan(shapeSeq, infoSeq);
         }
     }
 }
 
-// Called to bind functionality to input
-void AShapeSub::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+
+void AShapeSub::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
+    Super::EndPlay(EndPlayReason);
+
+    /* Delete the reader */
+    DDSDataReader* tmpReader = reader;
+    reader = NULL;
+    subscriber->delete_datareader(tmpReader);
+
+    Destroy();
+    GEngine->ForceGarbageCollection(true);
 }
+

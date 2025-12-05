@@ -13,6 +13,8 @@
 
 #include "ShapeSubDynamic.h"
 
+#include "BaseUtilities.h"
+
 // Sets default values
 AShapeSubDynamic::AShapeSubDynamic()
 {
@@ -29,6 +31,9 @@ AShapeSubDynamic::AShapeSubDynamic()
 void AShapeSubDynamic::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Initialization
+    BeginGameSession();
 }
 
 // Called every frame
@@ -37,18 +42,20 @@ void AShapeSubDynamic::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     /* Only read if the reader has been initialized */
-    if (Reader != dds::core::null) {
-        rti::sub::LoanedSamples<dds::core::xtypes::DynamicData> samples =
-                Reader.select().instance(Instance).take();
+    if (Reader != NULL) {
+        ShapeTypeExtended3DSeq shapeSeq;
+        DDS_SampleInfoSeq infoSeq;
 
+        Reader->take_instance(shapeSeq, infoSeq, DDS_LENGTH_UNLIMITED, Instance);
+        
         /* Process each sample which is valid */
-        for (const auto& sample : samples) {
-            if (sample->info().valid()) {
+        for (int i = 0; i < shapeSeq.length(); ++i) {
+            if (infoSeq[i].valid_data) {
                 /* Read the values we are interested (X and Y) from
                    the dynamic data */
-                int32 x = sample->data().value<int32>("x");
-                int32 y = sample->data().value<int32>("y");
-                int32 z = sample->data().value<int32>("z");
+                int32 x = shapeSeq[i].x;
+                int32 y = shapeSeq[i].y;
+                int32 z = shapeSeq[i].z;
                 /* Set the location. We want the shape to move horizontal
                    and vertical. Set the values and adjust for the different
                    origin, In order for publisher and subscriber to be at the
@@ -57,40 +64,20 @@ void AShapeSubDynamic::Tick(float DeltaTime)
                 FVector Location(z, 260 - x, 270 - y);
                 SetActorLocation(Location);
             }
-            bool die = false;
             /* Get the instance state */
-            const dds::sub::status::InstanceState& state =
-                    sample.info().state().instance_state();
-            if (state
-                == dds::sub::status::InstanceState::not_alive_disposed()) {
-                die = true;
-            }
-            if (state
-                == dds::sub::status::InstanceState::not_alive_no_writers()) {
-                die = true;
-            }
-            if (state == dds::sub::status::InstanceState::not_alive_mask()) {
-                die = true;
-            }
-            if (die) {
+            if (infoSeq[i].instance_state != DDS_ALIVE_INSTANCE_STATE) {
                 Destroy();
-                Reader = dds::core::null;
-                Instance = dds::core::null;
+                Reader = NULL;
             }
         }
+
+        Reader->return_loan(shapeSeq, infoSeq);
     }
 }
 
-// Called to bind functionality to input
-void AShapeSubDynamic::SetupPlayerInputComponent(
-        UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
 void AShapeSubDynamic::Initialize(
-        dds::sub::DataReader<dds::core::xtypes::DynamicData> myReader,
-        dds::core::InstanceHandle myInstance,
+        ShapeTypeExtended3DDataReader* myReader,
+        DDS_InstanceHandle_t myInstance,
         FString myColor)
 {
     Reader = myReader;
@@ -114,4 +101,14 @@ void AShapeSubDynamic::Initialize(
         StaticMesh->SetMaterial(0, Orange);
     else
         StaticMesh->SetMaterial(0, Default);
+}
+
+void AShapeSubDynamic::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    Reader = NULL;
+
+    Destroy();
+    GEngine->ForceGarbageCollection(true);
 }

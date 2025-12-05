@@ -15,7 +15,10 @@
 #pragma warning(disable : 4668)
 #pragma warning(disable : 4530)
 
-#include <dds/dds.hpp>
+#include "ndds/ndds_cpp.h"
+#include "ShapeType.h"
+#include "ShapeTypePlugin.h"
+#include "ShapeTypeSupport.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
@@ -41,26 +44,20 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
     int32 DomainID = 0;
 
-private:
-    FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
-    FString TYPE_NAME = FString("ShapeTypeExtended3D");
-    dds::sub::DataReader<dds::core::xtypes::DynamicData> reader =
-            dds::core::null;
-
-
 public:
     // Sets default values for this pawn's properties
     AShapeSub();
+    // Called every frame
+    virtual void Tick(float DeltaTime) override;
 
 protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-public:
-    // Called every frame
-    virtual void Tick(float DeltaTime) override;
-
-    // Called to bind functionality to input
-    virtual void SetupPlayerInputComponent(
-            class UInputComponent* PlayerInputComponent) override;
+private:
+    FString TYPE_NAME = FString("ShapeTypeExtended3D");
+    DDSDomainParticipant *participant = NULL;
+    DDSSubscriber *subscriber = NULL;
+    ShapeTypeExtended3DDataReader *reader = NULL;
 };

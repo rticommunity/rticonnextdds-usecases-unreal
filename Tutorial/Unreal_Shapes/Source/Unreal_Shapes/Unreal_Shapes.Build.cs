@@ -18,38 +18,35 @@ using UnrealBuildTool;
 
 public class Unreal_Shapes : ModuleRules
 {
-	public Unreal_Shapes(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+    public Unreal_Shapes(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-		bUseRTTI = true;
-		bEnableExceptions = true;
+        PrivateDependencyModuleNames.AddRange(new string[] { });
 
-		string nddshome = Environment.GetEnvironmentVariable("NDDSHOME");
+        //		bUseRTTI = true;
+        //		bEnableExceptions = true;
 
-		PublicIncludePaths.Add(Path.Combine(nddshome, "include"));
-		PublicIncludePaths.Add(Path.Combine(nddshome, "include/ndds"));
-		PublicIncludePaths.Add(Path.Combine(nddshome, "include/ndds/hpp"));
+        string nddshome = Environment.GetEnvironmentVariable("NDDSHOME");
 
-		PublicDefinitions.Add("RTI_WIN32");
-		PublicDefinitions.Add("RTI_STATIC");
-		PublicDefinitions.Add("WIN32_LEAN_AND_MEAN");
+        PublicIncludePaths.Add(Path.Combine(nddshome, "include"));
+        PublicIncludePaths.Add(Path.Combine(nddshome, "include/ndds"));
 
-		PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscpp2z.lib"));
-		PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscz.lib"));
-		PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscorez.lib"));
+        PublicDefinitions.Add("RTI_WIN32");
+        PublicDefinitions.Add("RTI_STATIC");
+        PublicDefinitions.Add("WIN32_LEAN_AND_MEAN");
 
+        PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscppz.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscz.lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Win64VS2017/nddscorez.lib"));
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
-
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
-	}
+        //    PrivateDefinitions.Add("RTI_LINUX");
+        //    PrivateDefinitions.Add("RTI_UNIX");
+        //    PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Linux5Unreal5.2clang15/nddscppz.a"));
+        //    PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Linux5Unreal5.2clang15/nddscz.a"));
+        //    PublicAdditionalLibraries.Add(Path.Combine(nddshome, "lib/x64Linux5Unreal5.2clang15/nddscorez.a"));
+    
+    }
 }

@@ -15,7 +15,10 @@
 #pragma warning(disable : 4668)
 #pragma warning(disable : 4530)
 
-#include <dds/dds.hpp>
+#include "ndds/ndds_cpp.h"
+#include "ShapeType.h"
+#include "ShapeTypePlugin.h"
+#include "ShapeTypeSupport.h"
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
@@ -38,58 +41,33 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, category = "Connext")
     FString Color = FString("BLUE");
 
-    /* Colors */
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Purple;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Blue;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Red;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Green;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Yellow;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Cyan;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Magenta;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Orange;
-    UPROPERTY(EditAnywhere, Category = "Color")
-    UMaterial* Default;
-
-
     /* Domain ID */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Connext")
     int32 DomainID = 0;
-
-private:
-    FString QOS_URL = FString("Connext/Unreal_Shapes.xml");
-    FString TYPE_NAME = FString("ShapeTypeExtended3D");
-    dds::pub::DataWriter<dds::core::xtypes::DynamicData> writer =
-            dds::core::null;
-    FVector MinBox = FVector(0.0f);
-    FVector MaxBox = FVector(250.0f, 260.0f, 270.0f);
-    FVector Direction = FVector(0.0f);
-    dds::core::xtypes::DynamicData* sample = dds::core::null;
-
 
 public:
     // Sets default values for this pawn's properties
     AShapePub();
 
-protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
-
-public:
     // Called every frame
     virtual void Tick(float DeltaTime) override;
 
     // Called to bind functionality to input
     virtual void SetupPlayerInputComponent(
-            class UInputComponent* PlayerInputComponent) override;
+        class UInputComponent* PlayerInputComponent) override;
 
-    void Initialize(int32_t myDomainId, FString myColor);
-    void StopPublish();
+protected:
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+private:
+    FString TYPE_NAME = FString("ShapeTypeExtended3D");
+    FVector MinBox = FVector(0.0f);
+    FVector MaxBox = FVector(250.0f, 260.0f, 270.0f);
+    FVector Direction = FVector(0.0f);
+    ShapeTypeExtended3D *sample = NULL;
+    DDSDomainParticipant *participant = NULL;
+    DDSPublisher *publisher = NULL;
+    ShapeTypeExtended3DDataWriter* writer = NULL;
 };
