@@ -45,6 +45,7 @@ void AShapeSubDynamic::Tick(float DeltaTime)
     if (Reader != NULL) {
         ShapeTypeExtended3DSeq shapeSeq;
         DDS_SampleInfoSeq infoSeq;
+        bool die = false;
 
         Reader->take_instance(shapeSeq, infoSeq, DDS_LENGTH_UNLIMITED, Instance);
         
@@ -67,11 +68,15 @@ void AShapeSubDynamic::Tick(float DeltaTime)
             /* Get the instance state */
             if (infoSeq[i].instance_state != DDS_ALIVE_INSTANCE_STATE) {
                 Destroy();
-                Reader = NULL;
+                die = true;
             }
         }
 
         Reader->return_loan(shapeSeq, infoSeq);
+
+        if (die) {
+            Reader = NULL;
+        }
     }
 }
 
