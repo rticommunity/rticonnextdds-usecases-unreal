@@ -1,5 +1,5 @@
 /*
- * (c) 2021 Copyright, Real-Time Innovations, Inc. (RTI) All rights reserved.
+ * (c) 2025 Copyright, Real-Time Innovations, Inc. (RTI) All rights reserved.
  *
  * RTI grants Licensee a license to use, modify, compile, and create derivative
  * works of the software solely for use with RTI Connext DDS.  Licensee may
@@ -32,7 +32,7 @@ void AShapesSubscriberManager::BeginPlay()
     BeginGameSession();
 
     /* Create a domain participant */
-    /* Let’s see if a domain participant already exists */
+    /* Letï¿½s see if a domain participant already exists */
     participant = DDSTheParticipantFactory->lookup_participant(DomainID);
 
     /* If not create one */
